@@ -1,12 +1,8 @@
 package com.codeoftheweb.salvo;
 
 import org.hibernate.annotations.GenericGenerator;
-
 import javax.persistence.*;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Entity
 public class GamePlayer {
@@ -23,6 +19,7 @@ public class GamePlayer {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="game_id")
     private Game game;
+
 
 
     @OneToMany(mappedBy="gamePlayer", fetch=FetchType.EAGER)
@@ -43,7 +40,6 @@ public class GamePlayer {
         return salvoes;
     }
 
-
     public GamePlayer() { }
 
     public GamePlayer(Player player, Game game) {
@@ -53,7 +49,6 @@ public class GamePlayer {
         this.player = player;
         this.game = game;
     }
-
 
     public long getId() {
         return id;
@@ -82,9 +77,5 @@ public class GamePlayer {
     public void setGame(Game game) {
         this.game = game;
     }
-
-
-
-
 
 }

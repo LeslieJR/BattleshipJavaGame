@@ -52,6 +52,7 @@ public class Ship {
         this.gamePlayer = gamePlayer;
     }
 
+
     public List<String> getLocations() {
         return locations;
     }

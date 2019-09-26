@@ -166,7 +166,6 @@ public class SalvoApplication extends SpringBootServletInitializer {
 			shipRepository.save(ship4);
 			shipRepository.save(ship5);
 			shipRepository.save(ship6);
-
 			shipRepository.save(ship7);
 			shipRepository.save(ship8);
 			shipRepository.save(ship9);

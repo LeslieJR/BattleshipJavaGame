@@ -12,7 +12,7 @@ public class Salvo {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     @GenericGenerator(name = "native", strategy = "native")
-    private long id;
+    private Long id;
     private Integer turn;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -23,18 +23,15 @@ public class Salvo {
     @Column(name="locations")
     private List<String> salvoes = new ArrayList<>();
 
-
     public Salvo() { }
-
 
     public Salvo(GamePlayer gameplayer, List<String> locations, Integer turn) {
         this.gamePlayer = gameplayer;
         this.salvoes = locations;
         this.turn = turn;
-
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 

@@ -62,18 +62,14 @@ public class SalvoController {
     @RequestMapping(path = "/games", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> createGame(Authentication authentication) {
         if(authentication == null){
-
             return new ResponseEntity<>(makeMap("error","You have to be logged in"), HttpStatus.FORBIDDEN);
         }
         Game newGame = new Game();
         gameRepository.save(newGame);
         GamePlayer newGamePlayer = new GamePlayer(getLoggedUser(authentication), newGame);
         gamePlayerRepository.save(newGamePlayer);
-
         return new ResponseEntity<>(makeMap("gpId", newGamePlayer.getId()), HttpStatus.CREATED); //*****
     }
-
-    //
 
     //Add a join game method to the application controller (joinGame)
     @RequestMapping(path = "/game/{gameId}/players", method = RequestMethod.POST)
@@ -110,7 +106,6 @@ public class SalvoController {
         return playerRepository.findByUserName(authentication.getName());
     }
 
-
     @RequestMapping("/games")
     public Map<String, Object> getAll(Authentication authentication) {
         Map<String, Object> playerObj = new HashMap<>();
@@ -129,13 +124,13 @@ public class SalvoController {
         // Assume that returns a Set
         // Now we can use the Set.stream() method to get a string, then the stream map() and collect() methods to create and return a list of DTO objects
         return playerObj;
-
         }
 
     @RequestMapping("/game_view/{gp_Id}")
     public Map<String, Object> getGameView(@PathVariable Long gp_Id) {
         GamePlayer gamePlayer = gamePlayerRepository.getOne(gp_Id);
         Game game = gamePlayer.getGame();
+
         return GameDTO(game, gamePlayer);
     }
 
@@ -149,6 +144,7 @@ public class SalvoController {
     @RequestMapping(path = "/games/players/{gp_Id}/salvos", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> listOfSalvos(Authentication authentication, @PathVariable Long gp_Id, @RequestBody List<String> locations) {
         GamePlayer currentGP = gamePlayerRepository.getOne(gp_Id);
+
         int currentTurn = currentGP.getSalvoes().size() + 1;
         Player userPlayer = getLoggedUser(authentication);
         if (authentication == null) {
@@ -160,9 +156,10 @@ public class SalvoController {
         if(userPlayer.getId() != currentGP.getPlayer().getId()) {
             return new ResponseEntity<>(makeMap("error", "the current user is not the game player the ID references"), HttpStatus.UNAUTHORIZED);
         }
-        //if(gamePlayerRepository.getOne(gp_Id).getSalvoes().size() != 0 ){
-          //  return new ResponseEntity<>(makeMap("error","the user already has salvoes"), HttpStatus.FORBIDDEN);
-        //}
+        if(gamePlayerRepository.getOne(gp_Id).getSalvoes().size() != 0 ){
+            return new ResponseEntity<>(makeMap("error","the user already has salvoes"), HttpStatus.FORBIDDEN);
+        }
+
         Salvo newSalvo = new Salvo(currentGP, locations, currentTurn);
         salvoRepository.save(newSalvo);
         return new ResponseEntity<>(makeMap("New Salvo created", newSalvo.getId()), HttpStatus.CREATED);
@@ -172,6 +169,7 @@ public class SalvoController {
     @RequestMapping(path="/games/players/{gp_Id}/ships", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> listOfShips(Authentication authentication, @PathVariable Long gp_Id, @RequestBody List<Ship> ships){
         GamePlayer currentGP = gamePlayerRepository.getOne(gp_Id);
+
         if(authentication == null) {
             return new ResponseEntity<>(makeMap("error","there is no user logged in"),HttpStatus.UNAUTHORIZED);
         }
@@ -182,9 +180,9 @@ public class SalvoController {
             return new ResponseEntity<>(makeMap("error","the current user is not the game player the ID references"), HttpStatus.UNAUTHORIZED);
         }
         if(gamePlayerRepository.getOne(gp_Id).getShips().size() != 0 || gamePlayerRepository.getOne(gp_Id).getShips().size() == 5){
-            return new ResponseEntity<>(makeMap("error","the user already has ships placed"), HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(makeMap("error","you already have ships placed"), HttpStatus.FORBIDDEN);
         }
-        if(ships.size() < 5){
+        if(ships.size() == 0 || ships.size() < 5){
             return new ResponseEntity<>(makeMap("error","You have to place all the ships"), HttpStatus.FORBIDDEN);
         }
         //****the game player should be set to the ship and the ship should be saved to the repo, and a Created response should be sent.
@@ -200,11 +198,12 @@ public class SalvoController {
     private Map<String, Object> shipsOpp(GamePlayer gamePlayer){
        Map<String, Object> hits = new LinkedHashMap<>();
        GamePlayer oppPlayer = oppPlayer(gamePlayer);
-       Set<Ship> ships = oppPlayer.getShips();
+
         if(oppPlayer(gamePlayer) != null) {
+            Set<Ship> ships = oppPlayer.getShips();
             //for the Set :forEach
             for (Ship ship: ships) {
-                hits.put(ship.getShiptype(), hitsDTO(gamePlayer, ship));
+                hits.put(ship.getShiptype(), hitsDTO(gamePlayer, ship)); //here we send the ship to the hitsDTO
             }
         }
        return hits;
@@ -212,40 +211,30 @@ public class SalvoController {
 
     private Map<Integer, Map<String, Object>> hitsDTO (GamePlayer gamePlayer, Ship ship) {
         Map<Integer, Map<String, Object>> dto = new LinkedHashMap<>();
-        Map<String, Object> infodto = new LinkedHashMap<>();
-        Set<Salvo> salvos = gamePlayer.getSalvoes();
-        //GamePlayer oppPlayer = oppPlayer(gamePlayer);
-        // Set<Ship> ships = oppPlayer.getShips();
+
+        Set<Salvo> salvos = gamePlayer.getSalvoes().stream().sorted((s1, s2) -> s2.getTurn().compareTo(s1.getTurn())).collect(Collectors.toSet()); //is necessary to sort salvos based on turn
         ArrayList<String> locations = new ArrayList<>();
+        locations.addAll(ship.getLocations());
 
-        int shipLength = 0;
-        ArrayList<String> positions = new ArrayList<>();
-            //forEach salvo in salvos
-            for (Salvo salvo : salvos) {
-                    shipLength = ship.getLocations().size();
-                    locations.addAll(ship.getLocations());
-                for (String position: salvo.getLocations()) {
-                    if(locations.contains(position)){
-                        infodto.put("hits", (position) );
-                    }
-                }
+        //forEach salvo in salvos
+        for (Salvo salvo : salvos) {
+            Map<String, Object> infodto = new LinkedHashMap<>();
+            ArrayList<String> positions = new ArrayList<>();
+            ArrayList<String> salvosLoc = new ArrayList<>();
+            salvosLoc.addAll(salvo.getLocations());
 
-                // }
-                if (shipLength == locations.size()) {
-                    infodto.put("sunk", true);
-                } else {
-                    infodto.put("sunk", false);
+            for (String position : salvosLoc) {
+                if (locations.contains(position)) {
+                    positions.add(position);
 
                 }
-                dto.put(salvo.getTurn(), infodto);
-
             }
-            return dto;
+            infodto.put("hits", positions);
+            dto.put(salvo.getTurn(), infodto);
         }
+        return dto;
 
-
-
-
+    }
 
     //Add a method to get a list of game IDs:
     private Map<String, Object> makeGameDTO(Game game) {
@@ -298,10 +287,12 @@ public class SalvoController {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", game.getId());
         dto.put("creation", game.getCreationDate());
+        dto.put("status", StatusDTO(game));
         dto.put("gamePlayers", game.getGameplayers()
                 .stream()
                 .map (gp -> gameplayerDTO(gp))   //for one gameplayer, the one that is the current player
                 .collect(Collectors.toList()));
+
         dto.put("ships", gamePlayer.getShips()        //here for the gameplayer we have passed we look for his ships type and locations
                                    .stream()
                                    .map(ship -> ShipDTO(ship))
@@ -316,8 +307,10 @@ public class SalvoController {
                                                    .map(salvo -> SalvoDTO(salvo))
                                                    .collect(Collectors.toList()));
         dto.put("hits", shipsOpp(gamePlayer));
+
         return dto;
         }
+
 
         //we also need to know the hits on the ships of the current player
         return dto;
@@ -345,6 +338,17 @@ public class SalvoController {
                                                     .findFirst().orElse(null);
     }
 
+    private String StatusDTO(Game game){
+        String status = new String();
+        Integer players = game.getGameplayers().size();
+        if(players == 1){
+        status = "Waiting for opponent";
+        }
+        else {
+            status = "Already two players, place your ships";
+        }
+        return status;
+    }
 
 
 

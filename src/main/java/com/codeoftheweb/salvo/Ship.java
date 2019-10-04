@@ -11,7 +11,7 @@ public class Ship {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     @GenericGenerator(name = "native", strategy = "native")
-    private long id;
+    private Long id;
     private String shiptype;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -32,7 +32,7 @@ public class Ship {
         gamePlayer.addShip(this);  //really important line of code
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 

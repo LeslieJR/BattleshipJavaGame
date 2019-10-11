@@ -59,4 +59,5 @@ public class Salvo {
     public void setLocations(List<String> salvoes) {
         this.salvoes = salvoes;
     }
+
 }

@@ -344,9 +344,15 @@ public class SalvoController {
         List<GamePlayer> ordgp = game.getGameplayers().stream().sorted((gp1,gp2)->gp1.getId().compareTo(gp2.getId())).collect(Collectors.toList());
         Integer ships = gamePlayer.getShips().size();
         Integer oppships = oppPlayer(gamePlayer).getShips().size();
+
+        //salvos contains all the positions the gameplayer has fired
         List<String> salvos = gamePlayer.getSalvoes().stream().flatMap(salvo -> salvo.getLocations().stream()).collect(toList());
-        List<String> opploc = oppPlayer(gamePlayer).getShips().stream().flatMap(ship-> ship.getLocations().stream()).collect(toList());
+        //shiploc contains all the locations of the gameplayer's ships
         List<String> shiploc = gamePlayer.getShips().stream().flatMap(ship -> ship.getLocations().stream()).collect(toList());
+
+        //opploc contains all the locations of the opponent's ships
+        List<String> opploc = oppPlayer(gamePlayer).getShips().stream().flatMap(ship-> ship.getLocations().stream()).collect(toList());
+        //oppsalvos contains all the positions the opponent has fired
         List<String> oppsalvos = oppPlayer(gamePlayer).getSalvoes().stream().flatMap(salvo -> salvo.getLocations().stream()).collect(toList());
 
         if ( players == 1) {
@@ -375,15 +381,14 @@ public class SalvoController {
            return status;
        }
 
-        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && oppsalvos.size()>=17 && oppsalvos.removeAll(shiploc) ){
+        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && oppsalvos.containsAll(shiploc) ){
             status = "You have lost the game";
             return status;
         }
-        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && salvos.size()>=17 && salvos.removeAll(opploc)){
+        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && salvos.containsAll(opploc)){
             status="You have won the game";
             return status;
         }
-
 
        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())){
            status = "Waiting for your salvos";
@@ -403,18 +408,7 @@ public class SalvoController {
             status = "Waiting for opponent salvos";
             return status;
        }
-
-
-
-
-        // if(players ==2 && gamePlayer.getSalvoes().size() != 0 && oppPlayer(gamePlayer).getSalvoes().size()==0){
-         //   status = "Wait for the opponent salvoes";
-        //}
-        //if(players ==2 && gamePlayer.getSalvoes().size() == 0 && oppPlayer(gamePlayer).getSalvoes().size() !=0){
-          //  status = "Place your salvoes";
-        //}
-
-
+       
         return status="Play";
     }
 }

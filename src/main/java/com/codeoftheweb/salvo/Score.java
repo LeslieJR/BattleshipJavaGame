@@ -11,7 +11,7 @@ public class Score {
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     @GenericGenerator(name = "native", strategy = "native")
     private long id;
-    private double points;
+    private double score;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="player_id")
@@ -24,10 +24,10 @@ public class Score {
 
 
     public Score(){}
-    public Score(Player player, Game game, Double points){
+    public Score(Player player, Game game, Double score){
         this.game = game;
         this.player = player;
-        this.points = points;
+        this.score = score;
     }
 
     public Player getPlayer() {
@@ -46,7 +46,12 @@ public class Score {
         return game;
     }
 
-    public double getPoints() {
-        return points;
+    public Double getScore() {
+        return score;
     }
+
+    public void setScore(Double score) {
+        this.score = score;
+    }
+
 }

@@ -134,12 +134,10 @@ public class SalvoController {
         return GameDTO(game, gamePlayer);
     }
 
-
     @RequestMapping("/scores")
     public List<Map<String, Object>> getScores() {
         return playerRepository.findAll().stream().map(player -> scoreDTO(player)).collect(toList());
     }
-
 
     @RequestMapping(path = "/games/players/{gp_Id}/salvos", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> listOfSalvos(Authentication authentication, @PathVariable Long gp_Id, @RequestBody List<String> locations) {
@@ -190,6 +188,7 @@ public class SalvoController {
         });
         return new ResponseEntity<>(makeMap("ok", "the ships are created"), HttpStatus.CREATED);
     }
+
 
     //***********************************************************************
     private Map<String, Object> shipsOpp(GamePlayer gamePlayer) {
@@ -256,17 +255,15 @@ public class SalvoController {
     private Map<String, Object> scoreDTO(Player player) {
         Map<String, Object> calc = new HashMap<>();
         calc.put("player", player.getUserName());
-        calc.put("total", player.getScores().stream().map(Score::getPoints).reduce(
+        calc.put("total", player.getScore().stream().map(Score::getScore).reduce(
                 0.0,
                 (a, b) -> a + b));
-        calc.put("wins", player.getScores().stream().map(Score::getPoints).filter(point -> point.equals(1.0)).count());
-        calc.put("loses", player.getScores().stream().map(Score::getPoints).filter(point -> point.equals(0.0)).count());
-        calc.put("ties", player.getScores().stream().map(Score::getPoints).filter(point -> point.equals(0.5)).count());
+        calc.put("wins", player.getScore().stream().map(Score::getScore).filter(point -> point.equals(1.0)).count());
+        calc.put("loses", player.getScore().stream().map(Score::getScore).filter(point -> point.equals(0.0)).count());
+        calc.put("ties", player.getScore().stream().map(Score::getScore).filter(point -> point.equals(0.5)).count());
         return calc;
 
-
     }
-
     private Map<String, Object> gameplayerDTO(GamePlayer gamePlayer) {
         Map<String, Object> dto = new LinkedHashMap<>();
         dto.put("id", gamePlayer.getId());
@@ -339,9 +336,10 @@ public class SalvoController {
 
     private String StatusDTO(GamePlayer gamePlayer, Game game) {
         String status = new String();
+        Game currentgame = gamePlayer.getGame();
         Integer players = game.getGameplayers().size();
         //to order gameplayers by id (the gp(0) is who has created the game)
-        List<GamePlayer> ordgp = game.getGameplayers().stream().sorted((gp1,gp2)->gp1.getId().compareTo(gp2.getId())).collect(Collectors.toList());
+        List<GamePlayer> ordgp = game.getGameplayers().stream().sorted((gp1, gp2) -> gp1.getId().compareTo(gp2.getId())).collect(Collectors.toList());
         Integer ships = gamePlayer.getShips().size();
         Integer oppships = oppPlayer(gamePlayer).getShips().size();
 
@@ -351,70 +349,92 @@ public class SalvoController {
         List<String> shiploc = gamePlayer.getShips().stream().flatMap(ship -> ship.getLocations().stream()).collect(toList());
 
         //opploc contains all the locations of the opponent's ships
-        List<String> opploc = oppPlayer(gamePlayer).getShips().stream().flatMap(ship-> ship.getLocations().stream()).collect(toList());
+        List<String> opploc = oppPlayer(gamePlayer).getShips().stream().flatMap(ship -> ship.getLocations().stream()).collect(toList());
         //oppsalvos contains all the positions the opponent has fired
         List<String> oppsalvos = oppPlayer(gamePlayer).getSalvoes().stream().flatMap(salvo -> salvo.getLocations().stream()).collect(toList());
 
-        if ( players == 1) {
+        if (players == 1) {
             status = "Waiting for opponent";
-            return status;
+
         }
         //System.out.println("gp1 "+ordgp.get(0).getId() + " gp2"+ordgp.get(1).getId());
-        if ( ships == 0 && oppships==0) {
+        else if (ships == 0 && oppships == 0) {
             status = "Already two players, place your ships";
-            return status;
+
         }
-        if( ships!=0 && oppships == 0){
+        else if (ships != 0 && oppships == 0) {
             status = "Waiting for the ships of the opponent";
-            return status;
-        }
-        if( ships==0 && oppships != 0){
-            status="Place your ships";
-            return status;
-        }
-       if(ordgp.get(0).getSalvoes().size()==0 && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())){
-           status="Waiting for your salvos";
-           return status;
-       }
-       if(ordgp.get(0).getSalvoes().size()==0 && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())){
-           status="Waiting for salvos of the opponent";
-           return status;
-       }
 
-        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && oppsalvos.containsAll(shiploc) ){
-            status = "You have lost the game";
-            return status;
         }
-        if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && salvos.containsAll(opploc)){
-            status="You have won the game";
-            return status;
+       else if (ships == 0 && oppships != 0) {
+            status = "Place your ships";
+
         }
 
-       if(ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())){
-           status = "Waiting for your salvos";
-           return status;
-       }
-       if(ordgp.get(1).getSalvoes().size() ==  ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())){
-            status = "Waiting for the opponent";
-            return status;
-       }
+        //no problem
+        //Game over
+       else if((ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size()) && (oppsalvos.containsAll(shiploc) || salvos.containsAll(opploc))) {
+            if ((oppsalvos.containsAll(shiploc) && salvos.containsAll(opploc))) {
+                status = "Tie";
+                setScores(gamePlayer, 0.5, 0.5);
 
-       if(ordgp.get(1).getSalvoes().size() < ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())){
-           status = "Send salvos";
-           return status;
-       }
+            }else if (oppsalvos.containsAll(shiploc)) {
+                status = "You have lost the game";
+                setScores(gamePlayer, 0.0, 1.0);
 
-       if(ordgp.get(1).getSalvoes().size() < ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())){
-            status = "Waiting for opponent salvos";
-            return status;
-       }
-       
-        return status="Play";
+            }
+            else {
+                status = "You have won the game";
+                setScores(gamePlayer, 1.0, 0.0);
+
+            }
+
+        } else {
+
+            if (ordgp.get(0).getSalvoes().size() == 0 && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())) {
+                status = "Waiting for your salvos";
+
+            }
+           else  if (ordgp.get(0).getSalvoes().size() == 0 && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())) {
+                status = "Waiting for salvos of the opponent";
+
+            }
+
+           else  if (ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())) {
+                status = "Waiting for your salvos";
+
+
+            }
+            else if (ordgp.get(1).getSalvoes().size() == ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())) {
+                status = "Waiting for the opponent salvos";
+
+            }
+           else if (ordgp.get(1).getSalvoes().size() < ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(1).getPlayer())) {
+                status = "Send salvos";
+
+            }
+
+            else if (ordgp.get(1).getSalvoes().size() < ordgp.get(0).getSalvoes().size() && gamePlayer.getPlayer().equals(ordgp.get(0).getPlayer())) {
+                status = "Waiting for opponent salvos";
+            }
+        }
+
+        return status;
+
     }
+    private void setScores(GamePlayer gamePlayer, double gpScore, double oppScore){
+        if (gamePlayer.getPlayer().getScores(gamePlayer.getGame())==null && oppPlayer(gamePlayer).getPlayer().getScores(gamePlayer.getGame())==null) {
+            Score scoreGp = new Score(gamePlayer.getPlayer(), gamePlayer.getGame(), gpScore);
+            Score scoreOpp = new Score(oppPlayer(gamePlayer).getPlayer(), gamePlayer.getGame(), oppScore);
+            scoreRepository.save(scoreGp);
+            scoreRepository.save(scoreOpp);
+        }
+    }
+
+
+
+
 }
-
-
-
 //
 
 

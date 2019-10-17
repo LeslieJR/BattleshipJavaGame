@@ -21,7 +21,7 @@ public class Player {
 
     //
     @OneToMany(mappedBy="player", fetch=FetchType.EAGER)
-    private Set<Score> scores = new HashSet<>();
+    private Set<Score> score = new HashSet<>();
 
     public Player() { }
 
@@ -50,15 +50,6 @@ public class Player {
         return id;
     }
 
-
-    public Set<Score> getScores() {
-        return scores;
-    }
-
-    public void setScores(Set<Score> scores) {
-        this.scores = scores;
-    }
-
     public String toString() {
         return userName;
     }
@@ -69,5 +60,18 @@ public class Player {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public Set<Score> getScore() {
+        return score;
+    }
+
+    public void setScore(Set<Score> score) {
+        this.score = score;
+    }
+
+    //method to get the score for an specific Game (game_id)
+    public Score getScores(Game game) {
+        return this.getScore().stream().filter(score -> score.getGame().getId()==game.getId()).findFirst().orElse(null);
     }
 }
